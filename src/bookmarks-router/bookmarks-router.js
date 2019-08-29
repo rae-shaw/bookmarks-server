@@ -69,9 +69,11 @@ bookmarksRouter
 				.status(404)
 				.send('Not found');
 		}
-	res
-		.status(204)
-		.end();
+		store.bookmarks.splice(bookmarkIndex, 1)
+		
+		res
+			.status(204)
+			.end();
 	})
 
 module.exports = bookmarksRouter
