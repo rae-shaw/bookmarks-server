@@ -3,7 +3,7 @@ const knex = require('knex')
 const app = require('../src/app')
 const { makeBookmarksArray } = require('./bookmarks.fixtures')
 
-describe.only('Bookmarks Endpoints', function() {
+describe('Bookmarks Endpoints', function() {
 	let db
 
 	before('make knex instance', () => {
@@ -14,13 +14,13 @@ describe.only('Bookmarks Endpoints', function() {
 	    app.set('db', db)
 	})
 
-	after('disconnect from db', () => db.destroy())
-
 	before('clean the table', () => db('bookmarks').truncate())
 
 	afterEach('cleanup', () => db('bookmarks').truncate())
 
-	context('Given there are bookmarkss in the database', () => {	
+	after('disconnect from db', () => db.destroy())
+
+	context('Given there are bookmarks in the database', () => {	
 
 		const testBookmarks = makeBookmarksArray()
 
@@ -30,7 +30,7 @@ describe.only('Bookmarks Endpoints', function() {
 				.insert(testBookmarks)
 		})
 
-		it('GET /bookmarks responds with 200 and all of the bookmarkss', () => {
+		it('GET /bookmarks responds with 200 and all of the bookmarks', () => {
 			return supertest(app)
 				.get('/bookmarks')
 				.expect(200, testBookmarks)
@@ -46,4 +46,21 @@ describe.only('Bookmarks Endpoints', function() {
 		})
 	})
 
+	describe.only(`POST /bookmarks`, () => {
+		it(`creates a bookmark, responding with 201 and the new bookmark`, function() {
+			return supertest(app)
+				.post('./bookmarks')
+				.send({
+					title: 'new bookmark title',
+					URL: 'https//:www.newbookmak.com',
+					description: 'Newest bookmark description. So much description',
+					rating: '3.4'
+				})
+			.expect(201)
+		})
+	})
+
+
 })
+
+
