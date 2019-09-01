@@ -7,6 +7,7 @@ const { NODE_ENV } = require('./config')
 const BookmarksService = require('./bookmarks-service')
 const logger = require('./logger')
 const bookmarksRouter = require('./bookmarks-router/bookmarks-router.js')
+const jsonParser = express.json()
 
 const app = express()
 
@@ -34,6 +35,7 @@ app.use(bookmarksRouter)
 app.get('/', (req, res) => {
 	res.send('Hello, world!')
 })
+
 
 app.use(function errorHandler(error, req, res, next) {
 	let response

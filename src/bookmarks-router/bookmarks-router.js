@@ -2,12 +2,19 @@ const express = require('express')
 const uuid = require('uuid/v4')
 const { isWebUri } = require('valid-url')
 const logger = require('../logger')
-const store = require('../store')
+//const store = require('../store')
 const BookmarksService = require('../bookmarks-service')
 
 
 const bookmarksRouter = express.Router()
 const bodyParser = express.json()
+const serializeBookmark = bookmark => ({
+  	id: bookmark.id,
+  	title: bookmark.title,
+  	url: bookmark.url,
+  	description: bookmark.description,
+  	rating: bookmark.rating,
+})
 
 bookmarksRouter
 	.route('/bookmarks')
@@ -20,7 +27,7 @@ bookmarksRouter
 		.catch(next)
 	})
 
-	.post(bodyParser, (req, res) => {
+	.post(bodyParser, (req, res, next) => {
 		for (const field of ['title', 'url', 'rating']) {
 			if (!req.body[field]) {
 				logger.error(`${field} is required`)
@@ -29,7 +36,7 @@ bookmarksRouter
 		}
 		const { title, url, description, rating } = req.body
 
-		if (!Number.isInteger(rating) || rating < 0 || rating > 5) {
+		if (!Number(rating) || rating < 0 || rating > 5) {
 			logger.error(`Invalid rating '${rating}' supplied`)
 			return res.status(400).send(`'rating' must be a number between 0 and 5`)
 		}
@@ -37,23 +44,29 @@ bookmarksRouter
 			logger.error(`Invalid url '${url}' supplied`)
 			return res.status(400).send(`'url' must be a valid URL`)
 		}
-		const bookmark = { id: uuid(), title, url, description, rating }
+		const newBookmark = { title, url, description, rating }
 
-		store.bookmarks.push(bookmark)
-
-		logger.info(`Bookmark with id ${bookmark.id} created`)
-		res
-			.status(201)
-			.location(`http://localhost:8000/bookmarks/${bookmark.id}`)
-			.json(bookmark)
-		})
+	    BookmarksService.insertBookmark(
+	      req.app.get('db'),
+	      newBookmark
+	    )
+	      .then(bookmark => {
+	        logger.info(`Bookmark with id ${bookmark.id} created.`)
+	        res
+	          .status(201)
+	          .location(`/bookmarks/${bookmark.id}`)
+	          .json(serializeBookmark(bookmark))
+	      })
+	      .catch(next)
+	})
 
 
 bookmarksRouter
 	.route('/bookmarks/:id')
 	.get((req, res, next) => {
 		const knexInstance = req.app.get('db')
-		BookmarksService.getById(knexInstance, req.params.article_id)
+		BookmarksService.getById(req.app.get('db'), req.params.bookmark_id)
+		console.log('params', req.params.bookmark_id)
 			.then(bookmark => {
 				if (!bookmark) {
 					logger.error(`Bookmark with id ${id} not found.`);
