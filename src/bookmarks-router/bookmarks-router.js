@@ -2,6 +2,7 @@ const express = require('express')
 const uuid = require('uuid/v4')
 const { isWebUri } = require('valid-url')
 const logger = require('../logger')
+const xss = require('xss')
 //const store = require('../store')
 const BookmarksService = require('../bookmarks-service')
 
@@ -10,9 +11,9 @@ const bookmarksRouter = express.Router()
 const bodyParser = express.json()
 const serializeBookmark = bookmark => ({
   	id: bookmark.id,
-  	title: bookmark.title,
+  	title: xss(bookmark.title),
   	url: bookmark.url,
-  	description: bookmark.description,
+  	description: xss(bookmark.description),
   	rating: bookmark.rating,
 })
 
@@ -22,7 +23,7 @@ bookmarksRouter
 		const knexInstance = req.app.get('db')
 		BookmarksService.getAllBookmarks(knexInstance)
 			.then(bookmarks => {
-				res.json(bookmarks)
+				res.json(bookmarks.map(serializeBookmark))
 		})
 		.catch(next)
 	})
@@ -63,37 +64,36 @@ bookmarksRouter
 
 bookmarksRouter
 	.route('/bookmarks/:id')
-	.get((req, res, next) => {
-		const knexInstance = req.app.get('db')
-		BookmarksService.getById(req.app.get('db'), req.params.id)
-			.then(bookmark => {
-				if (!bookmark) {
-					logger.error(`Bookmark with id ${id} not found.`);
-					return res
-						.status(404)
-						.send('Bookmark Not Found');
-				}
-			res.json(bookmark);
-		})
-		.catch(next)
+	.all((req, res, next) => {
+    	const { bookmark_id } = req.params
+   		BookmarksService.getById(req.app.get('db'), bookmark_id)
+      	.then(bookmark => {
+        	if (!bookmark) {
+          		logger.error(`Bookmark with id ${bookmark_id} not found.`)
+          		return res.status(404).json({
+            		error: { message: `Bookmark Not Found` }
+          		})
+        	}
+        	res.bookmark = bookmark
+        	next()
+     	 })
+      	.catch(next)
+  	})
+	.get((req, res) => {
+			res.json(serializeBookmark(res.bookmark))
 	})
 
-	.delete((req, res) => {
-		const { id } = req.params;
-
-		const bookmarkIndex = store.bookmarks.findIndex(c => c.id == id);
-
-		if (bookmarkIndex === -1) {
-			logger.error(`Bookmark with id ${id} not found.`);
-			return res
-				.status(404)
-				.send('Not found');
-		}
-		store.bookmarks.splice(bookmarkIndex, 1)
-		
-		res
-			.status(204)
-			.end();
-	})
+	.delete((req, res, next) => {
+    	const { bookmark_id } = req.params
+    	BookmarksService.deleteBookmark(
+      		req.app.get('db'),
+      		bookmark_id
+    	)
+      	.then(numRowsAffected => {
+        	logger.info(`Bookmark with id ${bookmark_id} deleted.`)
+        	res.status(204).end()
+      	})
+      .catch(next)
+  	})
 
 module.exports = bookmarksRouter
