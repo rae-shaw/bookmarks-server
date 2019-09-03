@@ -4,10 +4,12 @@ const morgan = require('morgan')
 const cors = require('cors')
 const helmet = require('helmet')
 const { NODE_ENV } = require('./config')
+const BookmarksService = require('./bookmarks-service')
 const logger = require('./logger')
 const bookmarksRouter = require('./bookmarks-router/bookmarks-router.js')
 const validateBearerToken = require('./validate-bearer-token.js')
 const errorHandler = require('./error-handler.js')
+
 
 const app = express()
 
@@ -27,5 +29,6 @@ app.get('/', (req, res) => {
 })
 
 app.use(errorHandler)
+
 
 module.exports = app
