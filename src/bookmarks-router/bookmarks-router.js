@@ -65,11 +65,10 @@ bookmarksRouter
 bookmarksRouter
 	.route('/bookmarks/:id')
 	.all((req, res, next) => {
-    	const { bookmark_id } = req.params
-   		BookmarksService.getById(req.app.get('db'), bookmark_id)
+   		BookmarksService.getById(req.app.get('db'), req.params.id)
       	.then(bookmark => {
         	if (!bookmark) {
-          		logger.error(`Bookmark with id ${bookmark_id} not found.`)
+          		logger.error(`Bookmark with id ${req.params.id} not found.`)
           		return res.status(404).json({
             		error: { message: `Bookmark Not Found` }
           		})
@@ -84,13 +83,12 @@ bookmarksRouter
 	})
 
 	.delete((req, res, next) => {
-    	const { bookmark_id } = req.params
     	BookmarksService.deleteBookmark(
       		req.app.get('db'),
-      		bookmark_id
+      		req.params.id
     	)
       	.then(numRowsAffected => {
-        	logger.info(`Bookmark with id ${bookmark_id} deleted.`)
+        	logger.info(`Bookmark with id ${req.params.id} deleted.`)
         	res.status(204).end()
       	})
       .catch(next)
