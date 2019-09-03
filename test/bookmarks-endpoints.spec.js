@@ -43,11 +43,69 @@ describe('Bookmarks Endpoints', function() {
 			it('GET /bookmarks responds with 200 and all of the bookmarks', () => {
 				return supertest(app)
 					.get('/bookmarks')
+					.set('Authorization', `Bearer ${process.env.API_TOKEN}`)
 					.expect(200, testBookmarks)
-					 // TODO: add more assertions about the body
+			})
+		})
+		context(`Given an XSS attack bookmark`, () => {
+      		const { maliciousBookmark, expectedBookmark } = fixtures.makeMaliciousBookmark()
+
+      		beforeEach('insert malicious bookmark', () => {
+        		return db
+          			.into('bookmarks_test')
+          			.insert([maliciousBookmark])
+      		})
+
+      		it('removes XSS attack content', () => {
+        		return supertest(app)
+          			.get(`/bookmarks`)
+          			.set('Authorization', `Bearer ${process.env.API_TOKEN}`)
+          			.expect(200)
+          			.expect(res => {
+            			expect(res.body[0].title).to.eql(expectedBookmark.title)
+            			expect(res.body[0].description).to.eql(expectedBookmark.description)
+          			})
 			})
 		})
 	})
+
+	describe(`Unauthorized requests`, () => {
+    	const testBookmarks = fixtures.makeBookmarksArray()
+
+    	beforeEach('insert bookmarks', () => {
+      		return db
+        		.into('bookmarks_test')
+        		.insert(testBookmarks)
+    	})
+
+    	it(`responds with 401 Unauthorized for GET /bookmarks`, () => {
+      		return supertest(app)
+        		.get('/bookmarks')
+        		.expect(401, { error: 'Unauthorized request' })
+    	})
+
+    	it(`responds with 401 Unauthorized for POST /bookmarks`, () => {
+      		return supertest(app)
+        		.post('/bookmarks')
+        		.send({ title: 'test-title', url: 'http://some.thing.com', rating: 1 })
+        		.expect(401, { error: 'Unauthorized request' })
+    	})
+
+    	it(`responds with 401 Unauthorized for GET /bookmarks/:id`, () => {
+      		const secondBookmark = testBookmarks[1]
+      		return supertest(app)
+       			.get(`/bookmarks/${secondBookmark.id}`)
+        		.expect(401, { error: 'Unauthorized request' })
+    	})
+
+    	it(`responds with 401 Unauthorized for DELETE /bookmarks/:id`, () => {
+      		const aBookmark = testBookmarks[1]
+      		return supertest(app)
+        		.delete(`/bookmarks/${aBookmark.id}`)
+        		.expect(401, { error: 'Unauthorized request' })
+    	})
+  	})
+
 
 	describe('GET /bookmarks/:id', () => {
 	    context(`Given no bookmarks`, () => {
@@ -70,6 +128,7 @@ describe('Bookmarks Endpoints', function() {
 				const expectedBookmark = testBookmarks[bookmarkId - 1]
 				return supertest(app)
 					.get(`/bookmarks/${bookmarkId}`)
+					.set('Authorization', `Bearer ${process.env.API_TOKEN}`)
 					.expect(200, expectedBookmark)
 			})
 		})
@@ -178,8 +237,8 @@ describe('Bookmarks Endpoints', function() {
 			}
 			return supertest(app)
 				.post('/bookmarks')
-				.send(newBookmark)
 				.set('Authorization', `Bearer ${process.env.API_TOKEN}`)
+				.send(newBookmark)
 				.expect(201)
 				.expect(res => {
 					expect(res.body.title).to.eql(newBookmark.title)
