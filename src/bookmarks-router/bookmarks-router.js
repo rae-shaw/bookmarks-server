@@ -65,7 +65,7 @@ bookmarksRouter
 	.route('/bookmarks/:id')
 	.get((req, res, next) => {
 		const knexInstance = req.app.get('db')
-		BookmarksService.getById(req.app.get('db'), req.params.bookmark_id)
+		BookmarksService.getById(req.app.get('db'), req.params.id)
 			.then(bookmark => {
 				if (!bookmark) {
 					logger.error(`Bookmark with id ${id} not found.`);

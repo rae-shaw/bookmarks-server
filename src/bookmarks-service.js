@@ -12,7 +12,7 @@ const BookmarksService = {
 			})
 	},
 	getById(knex, id) {
-		return knex.from('bookmarks_test').select('*').where({ id })[0]
+		return knex.from('bookmarks_test').select('*').where({ id }).first()
 		// return "foo"
 	},
 	deleteArticle(knex, id) {
